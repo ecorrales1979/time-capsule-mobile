@@ -1,16 +1,17 @@
+import { useEffect } from 'react'
 import { ImageBackground, Text, TouchableOpacity, View } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { styled } from 'nativewind'
 import { Roboto_400Regular, Roboto_700Bold } from '@expo-google-fonts/roboto'
 import { useFonts, BaiJamjuree_700Bold } from '@expo-google-fonts/bai-jamjuree'
-import * as SecureStore from 'expo-secure-store'
-
-import blurBg from './src/assets/bg-blur.png'
-import Stripes from './src/assets/stripes.svg'
-import Logo from './src/assets/spacetime_logo.svg'
 import { makeRedirectUri, useAuthRequest } from 'expo-auth-session'
-import { useEffect } from 'react'
-import { api } from './src/lib/api'
+import * as SecureStore from 'expo-secure-store'
+import { useRouter } from 'expo-router'
+
+import blurBg from '../src/assets/bg-blur.png'
+import Logo from '../src/assets/spacetime_logo.svg'
+import Stripes from '../src/assets/stripes.svg'
+import { api } from '../src/lib/api'
 
 const StyledStripes = styled(Stripes)
 
@@ -22,6 +23,8 @@ const discovery = {
 }
 
 export default function App() {
+  const router = useRouter()
+
   const [hasLoadedFonts] = useFonts({
     Roboto_400Regular,
     Roboto_700Bold,
@@ -39,21 +42,29 @@ export default function App() {
     discovery,
   )
 
+  const handleGithubOauthCode = async (code: string) => {
+    const result = await api
+      .post<{ token: string }>('/register', { code })
+      .catch((error) => {
+        console.error(error)
+      })
+
+    if (!result) {
+      throw new Error('Authentication request error')
+    }
+
+    const { token } = result.data
+    SecureStore.setItemAsync('spacetime-token', token)
+    router.push('/memories')
+  }
+
   useEffect(() => {
     if (response?.type === 'success') {
       const { code } = response.params
 
-      api
-        .post('/register', { code })
-        .then((resp) => {
-          const { token } = resp.data
-          SecureStore.setItemAsync('spacetime-token', token)
-        })
-        .catch((error) => {
-          console.error(error)
-        })
+      handleGithubOauthCode(code)
     }
-  }, [response])
+  }, [response]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!hasLoadedFonts) return null
 
