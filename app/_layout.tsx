@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { ImageBackground } from 'react-native'
 import { styled } from 'nativewind'
 import { SplashScreen, Stack } from 'expo-router'
@@ -13,11 +14,21 @@ import Stripes from '../src/assets/stripes.svg'
 const StyledStripes = styled(Stripes)
 
 export default function Layout() {
+  const [isUserAuthenticated, setIsUserAuthenticated] = useState<
+    boolean | null
+  >(null)
+
   const [hasLoadedFonts] = useFonts({
     Roboto_400Regular,
     Roboto_700Bold,
     BaiJamjuree_700Bold,
   })
+
+  useEffect(() => {
+    SecureStore.getItemAsync('spacetime-token').then((token) => {
+      setIsUserAuthenticated(!!token)
+    })
+  }, [])
 
   if (!hasLoadedFonts) return <SplashScreen />
 
@@ -36,7 +47,8 @@ export default function Layout() {
           contentStyle: { backgroundColor: 'transparent' },
         }}
       >
-        <Stack.Screen name="index" />
+        <Stack.Screen name="index" redirect={isUserAuthenticated} />
+        <Stack.Screen name="new" />
         <Stack.Screen name="memories" />
       </Stack>
     </ImageBackground>
