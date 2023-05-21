@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Image,
   ScrollView,
@@ -7,22 +8,56 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import Icon from '@expo/vector-icons/Feather'
 import * as ImagePicker from 'expo-image-picker'
+import { Link, useRouter } from 'expo-router'
+import * as SecureStore from 'expo-secure-store'
+import Icon from '@expo/vector-icons/Feather'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import Logo from '../src/assets/spacetime_logo.svg'
-import { Link } from 'expo-router'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useState } from 'react'
+import { api } from '../src/lib/api'
 
 export default function NewMemory() {
   const { bottom, top } = useSafeAreaInsets()
   const [content, setContent] = useState('')
   const [preview, setPreview] = useState<string | null>(null)
   const [isPublic, setIsPublic] = useState(false)
+  const router = useRouter()
 
-  const handleSubmit = () => {
-    console.log({ isPublic, content })
+  const handleSubmit = async () => {
+    const token = await SecureStore.getItemAsync('spacetime-token')
+    let coverUrl = ''
+
+    if (preview) {
+      const uploadFormData = new FormData()
+      uploadFormData.append('media', {
+        name: 'image.jpg',
+        type: 'image/jpeg',
+        uri: preview,
+      } as any)
+
+      const uploadResponse = await api.post<{ fileUrl: string }>(
+        '/upload',
+        uploadFormData,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      )
+      coverUrl = uploadResponse.data.fileUrl
+
+      const createMemoryResponse = await api.post(
+        '/memories',
+        { coverUrl, isPublic, content },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+
+      if (
+        createMemoryResponse.status < 200 ||
+        createMemoryResponse.status >= 300
+      ) {
+        throw new Error('Erro no cadastro da memória')
+      }
+
+      router.push('/memories')
+    }
   }
 
   const openImagePicker = async () => {
@@ -36,10 +71,6 @@ export default function NewMemory() {
         setPreview(result.assets[0].uri)
       }
     } catch (error) {}
-
-    // if (!result.canceled) {
-    //   setImage(result.assets[0].uri);
-    // }
   }
 
   return (
@@ -98,6 +129,7 @@ export default function NewMemory() {
           multiline
           value={content}
           onChangeText={setContent}
+          textAlignVertical="top"
           className="p-0 font-body text-lg text-gray-50"
           placeholder="Fique livre para adicionar fotos, vídeos e relatos sobre essa experiência"
           placeholderTextColor="#56565a"
