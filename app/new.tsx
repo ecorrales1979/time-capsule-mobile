@@ -1,4 +1,5 @@
 import {
+  Image,
   ScrollView,
   Switch,
   Text,
@@ -7,6 +8,7 @@ import {
   View,
 } from 'react-native'
 import Icon from '@expo/vector-icons/Feather'
+import * as ImagePicker from 'expo-image-picker'
 
 import Logo from '../src/assets/spacetime_logo.svg'
 import { Link } from 'expo-router'
@@ -15,10 +17,30 @@ import { useState } from 'react'
 
 export default function NewMemory() {
   const { bottom, top } = useSafeAreaInsets()
+  const [content, setContent] = useState('')
+  const [preview, setPreview] = useState<string | null>(null)
   const [isPublic, setIsPublic] = useState(false)
 
-  const handleSubmit = () => {}
-  console.log('Submitting...')
+  const handleSubmit = () => {
+    console.log({ isPublic, content })
+  }
+
+  const openImagePicker = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      })
+
+      if (result.assets[0].uri) {
+        setPreview(result.assets[0].uri)
+      }
+    } catch (error) {}
+
+    // if (!result.canceled) {
+    //   setImage(result.assets[0].uri);
+    // }
+  }
 
   return (
     <ScrollView
@@ -53,18 +75,29 @@ export default function NewMemory() {
 
         <TouchableOpacity
           activeOpacity={0.7}
+          onPress={openImagePicker}
           className="h-32 items-center justify-center rounded-lg border border-dashed border-gray-500 bg-black/20"
         >
-          <View className="flex-row items-center gap-2">
-            <Icon name="image" color="#fff" />
-            <Text className="font-body text-sm text-gray-200">
-              Adicione foto ou vídeo da capa
-            </Text>
-          </View>
+          {preview ? (
+            <Image
+              source={{ uri: preview }}
+              className="h-full w-full rounded-lg object-cover"
+              alt=""
+            />
+          ) : (
+            <View className="flex-row items-center gap-2">
+              <Icon name="image" color="#fff" />
+              <Text className="font-body text-sm text-gray-200">
+                Adicione foto ou vídeo da capa
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
 
         <TextInput
           multiline
+          value={content}
+          onChangeText={setContent}
           className="p-0 font-body text-lg text-gray-50"
           placeholder="Fique livre para adicionar fotos, vídeos e relatos sobre essa experiência"
           placeholderTextColor="#56565a"
